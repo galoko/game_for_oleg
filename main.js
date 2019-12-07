@@ -30,8 +30,8 @@ class GameObject {
 		const y = this.position[1];
 		const z = this.position[2];
 
-		this.topLeft     = vec4.fromValues(x - this.width / 2, y, z - this.height / 2, 1);
-		this.bottomRight = vec4.fromValues(x + this.width / 2, y, z + this.height / 2, 1);
+		this.topLeft     = vec4.fromValues(x - this.width / 2, y, z - this.height, 1);
+		this.bottomRight = vec4.fromValues(x + this.width / 2, y, z, 1);
 	}
 }
 
@@ -43,8 +43,8 @@ const screenHeight = scene.offsetHeight;
 scene.width = screenWidth;
 scene.height = screenHeight;
 
-const cameraPosition = vec3.fromValues(0, 0, 0);
-const cameraLookAt = vec3.fromValues(0, 1, 0);
+const cameraPosition = vec3.fromValues(0, 0, -2);
+const cameraLookAt = vec3.fromValues(0, 1, -2);
 
 const projection = mat4.create();
 const view = mat4.create();
@@ -67,7 +67,7 @@ const objects = [];
 objects.push(new GameObject(men,  1, 15, 0));
 objects.push(new GameObject(men, -1, 25, 0));
 objects.push(new GameObject(men,  1.5, 33, 0));
-objects.push(new GameObject(bush,  -0.5, 45, 0));
+objects.push(new GameObject(bush, -0.5, 45, 0));
 objects.push(new GameObject(men,  -3, 66, 0));
 
 const player = new GameObject(men, 0, 5, 0);
@@ -79,17 +79,48 @@ const bottomRightScreen = vec4.create();
 const topLeftScreenLeft = vec4.create();
 const topLeftScreenRight = vec4.create();
 
+const groundEnd = vec4.fromValues(0, 1000, 0, 1);
+
+var keys = [];
+
 function draw() {
-	const offset = 0.1;
+	let offsetX = 0.0;
+	let offsetY = 0.0;
 
-	vec4.add(player.position, player.position, vec4.fromValues(0, offset, 0, 0));
-	player.recalcPositions();
+	if (keys[68] || keys[39]) {
+		offsetX =  1;
+	} else if (keys[65] || keys[37]) {
+		offsetX = -1;
+	}
+	if (keys[87] || keys[38]) {
+		offsetY =  3;
+	} else if (keys[83] || keys[40]) {
+		offsetY = -3;
+	}
+	var len = Math.hypot(offsetX, offsetY);
+	if (len > 0) {
+		len = 1;
+		len *= 10;
 
-	vec3.add(cameraPosition, cameraPosition, vec3.fromValues(0, offset, 0));
-	vec3.add(cameraLookAt, cameraLookAt, vec3.fromValues(0, offset, 0));
-	updateView();
+		offsetX /= len;
+		offsetY /= len;
 
-	context.clearRect(0, 0, scene.width, scene.height);
+		vec4.add(player.position, player.position, vec4.fromValues(offsetX, offsetY, 0, 0));
+		player.recalcPositions();
+
+		vec3.add(cameraPosition, cameraPosition, vec3.fromValues(offsetX, offsetY, 0));
+		vec3.add(cameraLookAt, cameraLookAt, vec3.fromValues(offsetX, offsetY, 0));
+		updateView();
+	}
+
+	context.fillStyle = '#87CEEB';
+	context.fillRect(0, 0, scene.width, scene.height);
+
+	vec4.transformMat4(topLeftScreen, groundEnd, vp);
+	const groundY = topLeftScreen[1] / topLeftScreen[3];
+
+	context.fillStyle = '#9b7653';
+	context.fillRect(0, groundY * screen.height + screenHeight / 2, scene.width, scene.height);
 
 	objects.sort((left, right) => {
 		vec4.transformMat4(topLeftScreenLeft, left.topLeft, vp);
@@ -132,3 +163,11 @@ function draw() {
 	requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
+
+window.onkeydown = (event) => {
+	keys[event.keyCode] = true;
+}
+
+window.onkeyup = (event) => {
+	keys[event.keyCode] = false;
+}
