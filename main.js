@@ -86,6 +86,13 @@ function toCanvas(screenCoord, width, height) {
 		height = screenCoord.height;
 	}
 
+	if (width === undefined) {
+		width = 0;
+	}
+	if (height === undefined) {
+		height = 0;
+	}
+
 	const result = {};
 	result.width  = width  * screenWidth;
 	result.height = height * screenHeight;
@@ -104,20 +111,8 @@ objects.push(new GameObject(men,  1.5, 33, 0));
 objects.push(new GameObject(bush, -0.5, 45, 0));
 objects.push(new GameObject(men,  -3, 66, 0));
 
-const snowballs = [];
-
 function randomRange(min, max) {
 	return Math.random() * (max - min + 1) + min;
-}
-
-for (let i = 0; i < 500; i++) {
-	const instance = new GameObject(snowball, randomRange(-3, 3), randomRange(6, 66), -1);
-	instance.original_position = vec3.clone(instance.position);
-	instance.axis = vec3.fromValues(0, 0, 1);
-	vec3.add(instance.position, instance.position, vec3.fromValues(0, 0, -0.7));
-
-	objects.push(instance);
-	snowballs.push(instance);
 }
 
 const player = new GameObject(men, 0, 5, 0);
@@ -183,29 +178,8 @@ function fourPointsToCenterWidthHeight(fourPoints) {
 	}
 }
 
-const q = quat.create();
-const delta = vec3.create();
-function flySnowballs() {
-	snowballs.forEach((snowball) => {
-		vec3.sub(delta, snowball.position, snowball.original_position);
-
-		const axisChange = 0.1;
-		vec3.add(snowball.axis, snowball.axis, vec3.fromValues(randomRange(-axisChange, axisChange), randomRange(-axisChange, axisChange), randomRange(-axisChange, axisChange)));
-		vec3.normalize(snowball.axis, snowball.axis);
-
-		quat.setAxisAngle(q, snowball.axis, 0.1);
-
-		vec3.transformQuat(delta, delta, q);
-		vec3.normalize(delta, delta);
-		vec3.add(snowball.position, snowball.original_position, delta);
-
-		snowball.recalcPositions();
-	});
-}
-
 function draw() {
 	applyControls();
-	flySnowballs();
 
 	context.fillStyle = '#87CEEB'; // sky
 	context.fillRect(0, 0, scene.width, scene.height);
@@ -214,6 +188,30 @@ function draw() {
 
 	context.fillStyle = '#9b7653';
 	context.fillRect(0, groundPlane.y, groundPlane.width, groundPlane.height);
+
+	context.strokeStyle = 'black';
+	context.beginPath();
+
+	const startX = Math.trunc(cameraPosition[0]);
+	const startY = Math.trunc(cameraPosition[1]);
+
+	for (let x = -100; x <= 100; x++) {
+		const startH = toCanvas(toScreen(vec4.fromValues(x, startY + 3, 0, 1)));
+		const endH   = toCanvas(toScreen(vec4.fromValues(x, startY + 30, 0, 1)));
+
+		context.moveTo(startH.x, startH.y);
+		context.lineTo(endH.x, endH.y);
+	}
+
+	for (let y = 3; y <= 30; y++) {
+		const startV = toCanvas(toScreen(vec4.fromValues(startX - 1000, startY + y, 0, 1)));
+		const endV   = toCanvas(toScreen(vec4.fromValues(startX + 1000, startY + y, 0, 1)));
+
+		context.moveTo(startV.x, startV.y);
+		context.lineTo(endV.x, endV.y);
+	}
+
+	context.stroke();
 
 	objects.sort((left, right) => {
 		const zLeft  = fourPointsToCenterWidthHeight(objectToFourPoints(left)).z;
