@@ -48,7 +48,7 @@ const screenHeight = scene.offsetHeight;
 scene.width = screenWidth;
 scene.height = screenHeight;
 
-const cameraPosition = vec3.fromValues(0, 0, -3.25);
+const cameraPosition = vec3.fromValues(0, -4.5, -5.9);
 const cameraLookAt = vec3.fromValues(0, 1, -3);
 
 const projection = mat4.create();
@@ -107,6 +107,16 @@ const objects = [];
 
 objects.push(new GameObject(men,  1, 15, 0));
 objects.push(new GameObject(men, -1, 25, 0));
+
+var physics = [];
+for (var x = -25; x < 25; x++) {
+	for (var y = 50; y < 100; y++) {
+		var snowballInstance = new GameObject(snowball, x * 0.3, y * 0.3, -10 + randomRange(-1.0, 0.0));
+		objects.push(snowballInstance);
+		physics.push(snowballInstance);
+		snowballInstance.velocity = vec4.fromValues(0, 0, 0, 1);
+	}
+}
 objects.push(new GameObject(men,  1.5, 33, 0));
 objects.push(new GameObject(bush, -0.5, 45, 0));
 objects.push(new GameObject(men,  -3, 66, 0));
@@ -178,8 +188,28 @@ function fourPointsToCenterWidthHeight(fourPoints) {
 	}
 }
 
+function processPhysics() {
+	const t = vec4.fromValues(1 / 60, 1 / 60, 1 / 60, 1);
+	const gravity = vec4.create();
+	vec4.mul(gravity, vec4.fromValues(0, 0, 9.8, 1), t);
+	
+	physics.forEach((object) => {
+		vec4.add(object.velocity, object.velocity, gravity);
+		const positionOffset = vec4.create();
+		vec4.mul(positionOffset, object.velocity, t);
+		vec4.add(object.position, object.position, positionOffset);
+		if (object.position[2] > 0) {
+			object.velocity[2] = -object.velocity[2] * 1.0;
+			object.position[2] = 0;
+		}
+		object.velocity[1] -= 0.005;
+		object.recalcPositions();
+	});
+}
+
 function draw() {
 	applyControls();
+	processPhysics();
 
 	context.fillStyle = '#87CEEB'; // sky
 	context.fillRect(0, 0, scene.width, scene.height);
@@ -187,7 +217,7 @@ function draw() {
 	const groundPlane = toCanvas(toScreen(groundEnd), 1, 1);
 
 	context.fillStyle = '#9b7653';
-	context.fillRect(0, groundPlane.y, groundPlane.width, groundPlane.height);
+	context.fillRect(0, groundPlane.y, groundPlane.width, groundPlane.height * 2);
 
 	context.strokeStyle = 'black';
 	context.beginPath();
